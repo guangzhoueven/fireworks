@@ -71,6 +71,29 @@
             background-color: rgba(255, 105, 180, 0.5);
             border-color: hotpink;
         }
+        
+        .gitee-btn {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background-color: rgba(255, 255, 255, 0.2);
+            color: white;
+            border: 1px solid white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: Arial, sans-serif;
+            font-weight: bold;
+            font-size: 18px;
+            cursor: pointer;
+            transition: all 0.3s;
+            margin-left: auto;
+        }
+        
+        .gitee-btn:hover {
+            background-color: rgba(255, 255, 255, 0.3);
+            transform: scale(1.1);
+        }
     </style>
 </head>
 <body>
@@ -78,6 +101,7 @@
     <div class="control-panel">
         <button class="control-btn random-btn">随机模式: 关</button>
         <button class="control-btn bless-btn">发送祝福</button>
+        <a href="https://gitee.com/guangzhoueven/fireworks" target="_blank" class="gitee-btn">G</a>
     </div>
     <canvas id="fireworks"></canvas>
 
