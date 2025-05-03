@@ -1,0 +1,408 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>垂直上升烟花</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            background-color: #000;
+            cursor: pointer;
+            height: 100vh;
+            width: 100vw;
+        }
+        
+        canvas {
+            display: block;
+            position: fixed;
+            top: 0;
+            left: 0;
+            z-index: 1;
+        }
+        
+        .title {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: white;
+            font-family: Arial, sans-serif;
+            text-align: center;
+            z-index: 2;
+            pointer-events: none;
+        }
+        
+        .control-panel {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            z-index: 3;
+        }
+        
+        .control-btn {
+            padding: 10px 20px;
+            background-color: rgba(255, 255, 255, 0.2);
+            color: white;
+            border: 1px solid white;
+            border-radius: 20px;
+            font-family: Arial, sans-serif;
+            cursor: pointer;
+            transition: all 0.3s;
+            text-align: center;
+            min-width: 120px;
+        }
+        
+        .control-btn:hover {
+            background-color: rgba(255, 255, 255, 0.3);
+        }
+        
+        .random-btn.on {
+            background-color: rgba(255, 215, 0, 0.5);
+            border-color: gold;
+        }
+        
+        .bless-btn.active {
+            background-color: rgba(255, 105, 180, 0.5);
+            border-color: hotpink;
+        }
+    </style>
+</head>
+<body>
+    <div class="title">点击任意位置放烟花</div>
+    <div class="control-panel">
+        <button class="control-btn random-btn">随机模式: 关</button>
+        <button class="control-btn bless-btn">发送祝福</button>
+    </div>
+    <canvas id="fireworks"></canvas>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const canvas = document.getElementById('fireworks');
+            const ctx = canvas.getContext('2d');
+            const randomBtn = document.querySelector('.random-btn');
+            const blessBtn = document.querySelector('.bless-btn');
+            
+            // 设置canvas大小为窗口大小
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+            
+            // 窗口大小改变时重设canvas大小
+            window.addEventListener('resize', () => {
+                canvas.width = window.innerWidth;
+                canvas.height = window.innerHeight;
+            });
+            
+            // 烟花颜色数组
+            const colors = [
+                '#FFB6C1', // 浅粉色
+                '#FFD700', // 金色
+                '#C0C0C0', // 银色
+                '#B0E0E6'  // 粉蓝色
+            ];
+            
+            // 烟花粒子数组
+            let particles = [];
+            // 上升中的烟花数组
+            let risingFireworks = [];
+            // 随机模式状态
+            let randomMode = false;
+            let randomInterval;
+            // 祝福语数组
+            const blessings = ["祝你天天快乐", "身体健康", "天天开心"];
+            let currentBlessingIndex = 0;
+            let isBlessingActive = false;
+            
+            // 鼠标点击事件
+            canvas.addEventListener('click', (e) => {
+                if (!isBlessingActive) {
+                    launchFirework(e.clientX, e.clientY);
+                }
+            });
+            
+            // 触摸事件（移动设备支持）
+            canvas.addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                if (!isBlessingActive) {
+                    const touch = e.touches[0];
+                    launchFirework(touch.clientX, touch.clientY);
+                }
+            });
+            
+            // 随机放烟花按钮点击事件
+            randomBtn.addEventListener('click', () => {
+                if (isBlessingActive) return;
+                
+                randomMode = !randomMode;
+                
+                if (randomMode) {
+                    randomBtn.textContent = "随机模式: 开";
+                    randomBtn.classList.add('on');
+                    startRandomFireworks();
+                } else {
+                    randomBtn.textContent = "随机模式: 关";
+                    randomBtn.classList.remove('on');
+                    stopRandomFireworks();
+                }
+            });
+            
+            // 祝福按钮点击事件
+            blessBtn.addEventListener('click', () => {
+                if (randomMode) {
+                    randomMode = false;
+                    randomBtn.textContent = "随机模式: 关";
+                    randomBtn.classList.remove('on');
+                    stopRandomFireworks();
+                }
+                
+                isBlessingActive = true;
+                blessBtn.classList.add('active');
+                startBlessingSequence();
+            });
+            
+            // 开始随机放烟花
+            function startRandomFireworks() {
+                // 先立即放一个烟花
+                launchRandomFirework();
+                
+                // 设置定时器，每隔一段时间放烟花
+                randomInterval = setInterval(() => {
+                    launchRandomFirework();
+                }, 800); // 每800毫秒放一个烟花
+            }
+            
+            // 停止随机放烟花
+            function stopRandomFireworks() {
+                clearInterval(randomInterval);
+            }
+            
+            // 开始祝福语序列
+            function startBlessingSequence() {
+                currentBlessingIndex = 0;
+                launchBlessingFireworks(blessings[currentBlessingIndex]);
+            }
+            
+            // 发射祝福语烟花
+            function launchBlessingFireworks(text) {
+                // 发射一排烟花
+                const rowCount = 10;
+                const spacing = canvas.width / (rowCount + 1);
+                const yPos = canvas.height * 0.4;
+                
+                for (let i = 1; i <= rowCount; i++) {
+                    setTimeout(() => {
+                        launchFirework(i * spacing, yPos, true, text);
+                    }, i * 100);
+                }
+                
+                // 准备下一个祝福语
+                currentBlessingIndex++;
+                if (currentBlessingIndex < blessings.length) {
+                    setTimeout(() => {
+                        launchBlessingFireworks(blessings[currentBlessingIndex]);
+                    }, rowCount * 100 + 2000);
+                } else {
+                    setTimeout(() => {
+                        isBlessingActive = false;
+                        blessBtn.classList.remove('active');
+                    }, rowCount * 100 + 2000);
+                }
+            }
+            
+            // 发射随机位置的烟花
+            function launchRandomFirework() {
+                // 随机位置（水平位置随机，高度在屏幕上半部分）
+                const x = Math.random() * canvas.width;
+                const y = Math.random() * canvas.height * 0.6 + canvas.height * 0.2;
+                launchFirework(x, y);
+            }
+            
+            // 发射烟花（从底部垂直上升到目标高度）
+            function launchFirework(targetX, targetY, isBlessing = false, blessingText = "") {
+                const startX = targetX; // 从目标位置的正下方开始
+                const startY = canvas.height;
+                const color = colors[Math.floor(Math.random() * colors.length)];
+                
+                risingFireworks.push({
+                    x: startX,
+                    y: startY,
+                    targetY: targetY, // 只需要目标高度
+                    speed: 4 + Math.random() * 4,
+                    color: color,
+                    size: 3,
+                    arrived: false,
+                    isBlessing: isBlessing,
+                    blessingText: blessingText
+                });
+            }
+            
+            // 创建爆炸效果
+            function createExplosion(x, y, color, isBlessing = false, blessingText = "") {
+                if (isBlessing && blessingText) {
+                    createTextParticles(x, y, blessingText);
+                } else {
+                    const particleCount = 150;
+                    for (let i = 0; i < particleCount; i++) {
+                        const angle = Math.random() * Math.PI * 2;
+                        const speed = Math.random() * 10 + 4;
+                        const size = Math.random() * 3 + 1;
+                        const lifetime = Math.random() * 50 + 50;
+                        
+                        particles.push({
+                            x: x,
+                            y: y,
+                            vx: Math.cos(angle) * speed,
+                            vy: Math.sin(angle) * speed,
+                            size: size,
+                            color: color,
+                            alpha: 1,
+                            lifetime: lifetime,
+                            currentLife: 0,
+                            isText: false
+                        });
+                    }
+                }
+            }
+            
+            // 创建文字粒子
+            function createTextParticles(x, y, text) {
+                const fontSize = 20;
+                const textWidth = text.length * fontSize * 0.6;
+                const startX = x - textWidth / 2;
+                
+                // 临时canvas用于获取文字像素数据
+                const tempCanvas = document.createElement('canvas');
+                const tempCtx = tempCanvas.getContext('2d');
+                tempCanvas.width = textWidth;
+                tempCanvas.height = fontSize * 2;
+                
+                tempCtx.font = `${fontSize}px Arial`;
+                tempCtx.fillStyle = '#FFFFFF';
+                tempCtx.textAlign = 'left';
+                tempCtx.textBaseline = 'top';
+                tempCtx.fillText(text, 0, 0);
+                
+                const imageData = tempCtx.getImageData(0, 0, tempCanvas.width, tempCanvas.height);
+                const data = imageData.data;
+                
+                // 遍历像素点，创建粒子
+                for (let i = 0; i < data.length; i += 4) {
+                    if (data[i + 3] > 128) { // 如果像素不透明
+                        const px = (i / 4) % tempCanvas.width;
+                        const py = Math.floor((i / 4) / tempCanvas.width);
+                        
+                        if (px % 2 === 0 && py % 2 === 0) { // 降低密度
+                            const angle = Math.random() * Math.PI * 2;
+                            const speed = Math.random() * 2 + 1;
+                            const size = Math.random() * 2 + 2;
+                            const lifetime = Math.random() * 100 + 150;
+                            
+                            particles.push({
+                                x: startX + px,
+                                y: y + py - fontSize,
+                                vx: Math.cos(angle) * speed,
+                                vy: Math.sin(angle) * speed,
+                                size: size,
+                                color: colors[Math.floor(Math.random() * colors.length)],
+                                alpha: 1,
+                                lifetime: lifetime,
+                                currentLife: 0,
+                                isText: true
+                            });
+                        }
+                    }
+                }
+            }
+            
+            // 动画循环
+            function animate() {
+                // 清除画布
+                ctx.fillStyle = 'rgba(0, 0, 0, 0.2)';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                
+                // 更新和绘制上升中的烟花
+                for (let i = 0; i < risingFireworks.length; i++) {
+                    const fw = risingFireworks[i];
+                    
+                    if (!fw.arrived) {
+                        // 垂直上升
+                        fw.y -= fw.speed;
+                        
+                        // 如果到达目标高度，则爆炸
+                        if (fw.y <= fw.targetY) {
+                            fw.arrived = true;
+                            createExplosion(fw.x, fw.y, fw.color, fw.isBlessing, fw.blessingText);
+                            // 移除这个上升的烟花
+                            risingFireworks.splice(i, 1);
+                            i--;
+                            continue;
+                        }
+                        
+                        // 绘制上升的烟花
+                        ctx.globalAlpha = 1;
+                        ctx.fillStyle = fw.color;
+                        ctx.beginPath();
+                        ctx.arc(fw.x, fw.y, fw.size, 0, Math.PI * 2);
+                        ctx.fill();
+                        
+                        // 绘制垂直尾迹
+                        ctx.globalAlpha = 0.3;
+                        ctx.beginPath();
+                        ctx.moveTo(fw.x, fw.y);
+                        ctx.lineTo(fw.x, fw.y + 10); // 垂直下方的尾迹
+                        ctx.strokeStyle = fw.color;
+                        ctx.lineWidth = 2;
+                        ctx.stroke();
+                    }
+                }
+                
+                // 更新和绘制爆炸粒子
+                for (let i = 0; i < particles.length; i++) {
+                    const p = particles[i];
+                    
+                    // 更新位置
+                    p.x += p.vx;
+                    p.y += p.vy;
+                    
+                    // 重力效果（文字粒子重力较小）
+                    p.vy += p.isText ? 0.02 : 0.1;
+                    
+                    // 更新生命周期
+                    p.currentLife++;
+                    
+                    // 计算透明度
+                    p.alpha = 1 - (p.currentLife / p.lifetime);
+                    
+                    // 绘制粒子
+                    ctx.globalAlpha = p.alpha;
+                    ctx.fillStyle = p.color;
+                    ctx.beginPath();
+                    ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+                    ctx.fill();
+                    
+                    // 移除生命周期结束的粒子
+                    if (p.currentLife >= p.lifetime) {
+                        particles.splice(i, 1);
+                        i--;
+                    }
+                }
+                
+                requestAnimationFrame(animate);
+            }
+            
+            // 开始动画
+            animate();
+            
+            // 初始烟花效果
+            setTimeout(() => {
+                launchFirework(canvas.width / 2, canvas.height / 2);
+            }, 300);
+        });
+    </script>
+</body>
+</html>
