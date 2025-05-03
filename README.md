@@ -8,4 +8,4 @@
 1.使用浏览器打开即可
 
 #### Bug反馈区:    (密码：fireworks)
-[点我前往](https://netcut.cn/fireworksBUGER)
+[点我前往](https://netcut.cn/fireworksBUGER) 
